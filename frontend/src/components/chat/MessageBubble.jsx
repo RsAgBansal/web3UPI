@@ -29,7 +29,7 @@ const MessageBubble = ({ message }) => {
             {message.code && (
               <CodeBlock 
                 code={message.code} 
-                language="solidity"
+                language={message.code.startsWith('{') || message.code.startsWith('[') ? 'json' : 'solidity'}
                 showLineNumbers={true}
               />
             )}

@@ -32,25 +32,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-            <span className="text-green-600 text-xl">🔍</span>
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Code Analysis</h3>
-          <p className="text-gray-600">
-            Understand existing contracts, identify issues, and get explanations for complex code patterns.
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-            <span className="text-purple-600 text-xl">🎓</span>
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Learning Assistant</h3>
-          <p className="text-gray-600">
-            Learn Solidity best practices, security patterns, and development techniques through interactive examples.
-          </p>
-        </div>
+       
       </div>
 
    

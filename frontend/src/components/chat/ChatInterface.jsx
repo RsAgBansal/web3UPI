@@ -38,65 +38,68 @@ const ChatInterface = () => {
     setIsLoading(true)
 
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch('/api/chat', {
+      // Call the backend API
+      const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: inputValue,
-          history: messages
+          message: inputValue
         }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get response')
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
 
+      let assistantContent = ''
+      let assistantCode = ''
+
+      if (data.success) {
+        // Display the LLM response
+        assistantContent = `Here's what I generated for you:`
+        
+        // If it's JSON, format it nicely
+        if (data.response) {
+          try {
+            const jsonResponse = typeof data.response === 'string' ? JSON.parse(data.response) : data.response
+            assistantCode = JSON.stringify(jsonResponse, null, 2)
+          } catch {
+            assistantCode = data.response
+          }
+        }
+
+        // Add context information if available
+        if (data.context_chunks) {
+          assistantContent += `\n\n📚 Context used from training data:\n${data.context_chunks}`
+        }
+      } else {
+        assistantContent = `Error: ${data.error}`
+      }
+
       const assistantMessage = {
         id: Date.now() + 1,
         type: 'assistant',
-        content: data.response,
-        code: data.code, // If response includes code
+        content: assistantContent,
+        code: assistantCode,
+        rawJson: data.raw_llm_output, // Store raw JSON for debugging
         timestamp: new Date()
       }
 
       setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
-      // Mock response for now
-      setTimeout(() => {
-        const mockResponse = {
-          id: Date.now() + 1,
-          type: 'assistant',
-          content: `I understand you want to work with: "${inputValue}". Here's a sample Solidity contract:`,
-          code: `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract MyContract {
-    address public owner;
-    
-    constructor() {
-        owner = msg.sender;
-    }
-    
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not the owner");
-        _;
-    }
-    
-    function example() public pure returns (string memory) {
-        return "Hello, Solidity!";
-    }
-}`,
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, mockResponse])
-        setIsLoading(false)
-      }, 1000)
-      return
+      console.error('API call failed:', error)
+      
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: `❌ Connection Error: ${error.message}\n\nMake sure the backend server is running on http://localhost:8000\n\nTo start the backend, run: python backend/api_server.py`,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
     }
 
     setIsLoading(false)
