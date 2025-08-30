@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class MindUnitsBot:
+class NeoPayBot:
     def __init__(self):
         self.backend_url = BACKEND_URL
         # Dictionary to track user request counts {user_id: count}
@@ -50,17 +50,17 @@ class MindUnitsBot:
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /start command"""
         welcome_message = """
-🚀 Welcome to MindUnits AI Assistant!
+🚀 Welcome to Neo Pay Web3 UPI!
 
-I'm your personal Solidity smart contract assistant powered by AI and RAG technology.
+I'm your Web3 UPI bridge assistant. Send crypto to any UPI ID instantly!
 
 ⚡ **Request Limit: 5 queries per session**
 
 💡 **What I can do:**
-• Create smart contracts (ERC20, NFT, DeFi, etc.)
-• Explain existing code
-• Help with blockchain transactions
-• Generate Solidity code from natural language
+• Connect your MetaMask wallet
+• Send crypto to UPI IDs instantly
+• Check wallet balances and transactions
+• Switch between blockchain networks
 
 📝 **Commands:**
 • /start - Start the bot
@@ -72,12 +72,12 @@ I'm your personal Solidity smart contract assistant powered by AI and RAG techno
 **Just type your request in natural language!**
 
 **Examples:**
-• "Create an ERC20 token contract"
-• "Transfer 1 ETH to address 0x123..."
-• "Explain what this contract does"
-• "Deploy a voting contract"
+• "Connect my MetaMask wallet"
+• "Send 0.1 ETH to user@paytm"
+• "Check my wallet balance"
+• "Switch to Base network"
 
-Let's build some amazing Web3 projects together! 🔥
+Let's bridge crypto and UPI payments together! 🔥
         """
         await update.message.reply_text(welcome_message)
 
@@ -113,7 +113,7 @@ Let's build some amazing Web3 projects together! 🔥
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /help command"""
         help_message = """
-🆘 **MindUnits AI Assistant Help**
+🆘 **Neo Pay Web3 UPI Help**
 
 **Available Commands:**
 • /start - Show welcome message
@@ -282,12 +282,12 @@ Current usage: {self.user_request_counts.get(user_id, 0)}/{self.max_requests}
 
 def main() -> None:
     """Start the bot"""
-    print("🚀 Starting MindUnits Telegram Bot...")
+    print("🚀 Starting Neo Pay Telegram Bot...")
     print(f"🔗 Backend URL: {BACKEND_URL}")
     print(f"🤖 Bot Token: {TELEGRAM_BOT_TOKEN[:10]}...")
     
     # Create the bot instance
-    bot = MindUnitsBot()
+    bot = NeoPayBot()
     
     # Create the Application
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()

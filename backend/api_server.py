@@ -96,7 +96,7 @@ def test_llm():
         })
 
 if __name__ == '__main__':
-    print("🚀 Starting MindUnits Backend Server")
+    print("🚀 Starting Neo Pay Backend Server")
     print(f"📁 Model directory: {MODEL_DIR}")
     print("🌐 Server will run on http://localhost:8000/api/chat")
     print("🔗 Frontend should connect to http://localhost:8000/api/chat")
