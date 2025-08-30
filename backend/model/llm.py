@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import numpy as np
+from usage_tracker import usage_tracker
+import hashlib
 
 # Set default model globally
 DEFAULT_EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
@@ -86,13 +88,65 @@ def find_matching_samples(user_instruction, samples, model=DEFAULT_EMBEDDING_MOD
 # Load all samples once
 all_samples = load_samples(SAMPLES_FILE)
 
+def generate_user_id(prompt: str, additional_data: str = "") -> str:
+    """Generate a consistent user ID from prompt and additional data"""
+    combined = f"{prompt}{additional_data}"
+    return hashlib.md5(combined.encode()).hexdigest()[:12]
+
 # === Read prompt from stdin ===
 raw_input = sys.stdin.read()
 try:
     data = json.loads(raw_input)
     prompt = data["prompt"]
+    # Extract user identification data (you can modify this based on your needs)
+    user_ip = data.get("user_ip", "unknown")
+    user_session = data.get("user_session", "")
+    payment_tx_hash = data.get("payment_tx_hash", "")  # For payment verification
+    
+    # Generate consistent user ID
+    user_id = generate_user_id(prompt, f"{user_ip}_{user_session}")
+    
 except Exception as e:
     json.dump({"error": f"Invalid input format: {str(e)}"}, sys.stdout)
+    sys.exit(1)
+
+# === Handle Payment Verification (if provided) ===
+if payment_tx_hash:
+    payment_result = usage_tracker.verify_payment(user_id, payment_tx_hash)
+    json.dump({
+        "payment_verification": payment_result,
+        "user_status": usage_tracker.get_user_status(user_id)
+    }, sys.stdout)
+    sys.exit(0)
+
+# === Check Usage Limits (X402 Feature) ===
+request_result = usage_tracker.record_request(user_id)
+
+# Add debug logging
+print(f"DEBUG: User ID: {user_id}", file=sys.stderr)
+print(f"DEBUG: Request result: {request_result}", file=sys.stderr)
+
+if not request_result["success"]:
+    # User exceeded free limit and needs to pay
+    payment_request = usage_tracker.get_payment_request(user_id)
+    
+    print(f"DEBUG: Payment required for user {user_id}", file=sys.stderr)
+    
+    response_data = {
+        "error": "Payment Required (X402)",
+        "error_code": 402,
+        "message": "You have exceeded the free request limit. Payment required to continue.",
+        "user_status": request_result["status"],
+        "payment_request": payment_request,
+        "instructions": {
+            "step1": "Send the required ETH amount to the payment address",
+            "step2": "Copy the transaction hash from MetaMask",
+            "step3": "Include the transaction hash in your next request as 'payment_tx_hash'",
+            "step4": "Your access will be activated for 24 hours"
+        }
+    }
+    
+    json.dump(response_data, sys.stdout)
     sys.exit(1)
 
 # === Build System Prompt and Full Prompt ===
@@ -154,7 +208,13 @@ try:
 
     result = {
         "response": completion,
-        "context_chunks": context_display.strip()  # Now a formatted string
+        "context_chunks": context_display.strip(),  # Now a formatted string
+        "user_status": usage_tracker.get_user_status(user_id),
+        "x402_info": {
+            "requests_used": request_result["status"]["requests_used"],
+            "free_requests_remaining": request_result["status"]["free_requests_remaining"],
+            "has_paid_access": request_result["status"]["has_valid_payment"]
+        }
     }
     json.dump(result, sys.stdout)
 

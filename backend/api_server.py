@@ -13,17 +13,26 @@ MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model')
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """Handle chat requests from frontend and send to llm.py"""
+    """Handle chat requests from frontend and send to llm.py with X402 support"""
     try:
         # Get the message from frontend
         data = request.get_json()
         message = data.get('message', '')
+        payment_tx_hash = data.get('payment_tx_hash', '')  # For payment verification
         
         if not message:
             return jsonify({"error": "No message provided"}), 400
-        # Prepare input for llm.py
+            
+        # Get user identification info
+        user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
+        user_agent = request.headers.get('User-Agent', '')
+        
+        # Prepare input for llm.py with X402 data
         llm_input = {
-            "prompt": message
+            "prompt": message,
+            "user_ip": user_ip,
+            "user_session": user_agent[:50],  # Use part of user agent as session identifier
+            "payment_tx_hash": payment_tx_hash
         }
         
         # Call llm.py script
@@ -45,6 +54,9 @@ def chat():
                     "success": True,
                     "response": llm_response.get("response", ""),
                     "context_chunks": llm_response.get("context_chunks", ""),
+                    "user_status": llm_response.get("user_status", {}),
+                    "x402_info": llm_response.get("x402_info", {}),
+                    "payment_verification": llm_response.get("payment_verification", {}),
                     "raw_llm_output": llm_response
                 })
             except json.JSONDecodeError:
@@ -53,6 +65,14 @@ def chat():
                     "raw_output": result.stdout
                 }), 500
         else:
+            # Handle X402 payment required error
+            try:
+                error_response = json.loads(result.stdout)
+                if error_response.get("error_code") == 402:
+                    return jsonify(error_response), 402
+            except:
+                pass
+            
             return jsonify({
                 "error": "LLM execution failed",
                 "stderr": result.stderr,
@@ -94,6 +114,86 @@ def test_llm():
             "llm_available": False,
             "error": str(e)
         })
+
+@app.route('/api/usage/status', methods=['POST'])
+def get_usage_status():
+    """Get user usage status for X402 feature"""
+    try:
+        from model.usage_tracker import usage_tracker
+        
+        data = request.get_json()
+        user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
+        user_agent = request.headers.get('User-Agent', '')
+        
+        # Generate user ID same way as llm.py
+        import hashlib
+        user_id = hashlib.md5(f"{user_ip}_{user_agent[:50]}".encode()).hexdigest()[:12]
+        
+        status = usage_tracker.get_user_status(user_id)
+        
+        return jsonify({
+            "success": True,
+            "user_id": user_id,
+            "status": status
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to get usage status: {str(e)}"}), 500
+
+@app.route('/api/payment/request', methods=['POST'])
+def get_payment_request():
+    """Get payment request details for X402"""
+    try:
+        from model.usage_tracker import usage_tracker
+        
+        data = request.get_json()
+        user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
+        user_agent = request.headers.get('User-Agent', '')
+        
+        # Generate user ID same way as llm.py
+        import hashlib
+        user_id = hashlib.md5(f"{user_ip}_{user_agent[:50]}".encode()).hexdigest()[:12]
+        
+        payment_request = usage_tracker.get_payment_request(user_id)
+        
+        return jsonify({
+            "success": True,
+            "user_id": user_id,
+            "payment_request": payment_request
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to get payment request: {str(e)}"}), 500
+
+@app.route('/api/payment/verify', methods=['POST'])
+def verify_payment():
+    """Verify payment transaction for X402"""
+    try:
+        from model.usage_tracker import usage_tracker
+        
+        data = request.get_json()
+        tx_hash = data.get('tx_hash', '')
+        
+        if not tx_hash:
+            return jsonify({"error": "Transaction hash is required"}), 400
+        
+        user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
+        user_agent = request.headers.get('User-Agent', '')
+        
+        # Generate user ID same way as llm.py
+        import hashlib
+        user_id = hashlib.md5(f"{user_ip}_{user_agent[:50]}".encode()).hexdigest()[:12]
+        
+        verification_result = usage_tracker.verify_payment(user_id, tx_hash)
+        
+        return jsonify({
+            "success": True,
+            "user_id": user_id,
+            "verification": verification_result
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Payment verification failed: {str(e)}"}), 500
 
 if __name__ == '__main__':
     print("🚀 Starting MindUnits Backend Server")

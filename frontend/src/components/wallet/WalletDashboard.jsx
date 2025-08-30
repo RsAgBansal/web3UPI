@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import WalletConnect from './WalletConnect';
 import UPITransfer from './UPITransfer';
+import EthToUPITransfer from './EthToUPITransfer';
 import metamaskService from '../../services/metamask';
 
 const WalletDashboard = () => {
@@ -118,16 +119,26 @@ const WalletDashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Wallet Connection */}
         <div>
           <WalletConnect />
         </div>
 
-        {/* UPI Transfer */}
+        {/* Original UPI Transfer */}
         <div>
           <UPITransfer />
         </div>
+
+        {/* Enhanced ETH → UPI Transfer */}
+        <div className="xl:col-span-1">
+          <EthToUPITransfer />
+        </div>
+      </div>
+
+      {/* Full-width ETH → UPI Transfer on smaller screens */}
+      <div className="xl:hidden">
+        <EthToUPITransfer />
       </div>
 
       {/* Transaction History */}
