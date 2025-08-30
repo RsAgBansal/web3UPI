@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react'
 import MessageBubble from './MessageBubble'
 import CodeBlock from './CodeBlock'
 import BlockchainActionCard from '../blockchain/BlockchainActionCard'
-import X402PaymentModal from './X402PaymentModal'
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([
@@ -15,11 +14,6 @@ const ChatInterface = () => {
   ])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isRetrying, setIsRetrying] = useState(false)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [paymentRequest, setPaymentRequest] = useState(null)
-  const [userStatus, setUserStatus] = useState(null)
-  const [pendingMessage, setPendingMessage] = useState('')
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -32,7 +26,6 @@ const ChatInterface = () => {
 
   const regenerateResponse = async (userInput) => {
     setIsLoading(true)
-    setIsRetrying(true)
 
     try {
       // Call the backend API again with the same input
@@ -46,22 +39,11 @@ const ChatInterface = () => {
         }),
       })
 
-      const data = await response.json()
-
-      // Handle X402 Payment Required
-      if (response.status === 402) {
-        setPaymentRequest(data.payment_request)
-        setUserStatus(data.user_status)
-        setShowPaymentModal(true)
-        setPendingMessage(userInput)
-        setIsLoading(false)
-        setIsRetrying(false)
-        return
-      }
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
+
+      const data = await response.json()
 
       let assistantContent = ''
       let assistantCode = ''
@@ -157,62 +139,39 @@ const ChatInterface = () => {
     }
 
     setIsLoading(false)
-    setIsRetrying(false)
   }
 
-  const sendMessage = async (retryWithPayment = false, txHash = '') => {
+  const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
 
-    const messageToSend = retryWithPayment ? pendingMessage : inputValue
-    
     const userMessage = {
       id: Date.now(),
       type: 'user',
-      content: messageToSend,
+      content: inputValue,
       timestamp: new Date()
     }
 
-    if (!retryWithPayment) {
-      setMessages(prev => [...prev, userMessage])
-      setPendingMessage(messageToSend)
-    }
-    
+    setMessages(prev => [...prev, userMessage])
     setInputValue('')
     setIsLoading(true)
 
     try {
       // Call the backend API
-      const requestBody = {
-        message: messageToSend
-      }
-      
-      // Include payment tx hash if retrying with payment
-      if (retryWithPayment && txHash) {
-        requestBody.payment_tx_hash = txHash
-      }
-
       const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          message: inputValue
+        }),
       })
-
-      const data = await response.json()
-
-      // Handle X402 Payment Required
-      if (response.status === 402) {
-        setPaymentRequest(data.payment_request)
-        setUserStatus(data.user_status)
-        setShowPaymentModal(true)
-        setIsLoading(false)
-        return
-      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
+
+      const data = await response.json()
 
       let assistantContent = ''
       let assistantCode = ''
@@ -317,40 +276,13 @@ const ChatInterface = () => {
     }
   }
 
-  const handlePaymentSuccess = async (txHash, verificationData) => {
-    setShowPaymentModal(false)
-    // Retry the original message with payment
-    await sendMessage(true, txHash)
-  }
-
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-lg shadow-sm border">
         {/* Chat Header */}
         <div className="p-4 border-b">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Solidity AI Assistant</h2>
-              <p className="text-sm text-gray-500">Ask me anything about Solidity smart contracts</p>
-            </div>
-            
-            {/* Usage Status */}
-            {userStatus && (
-              <div className="text-right">
-                <div className="text-sm text-gray-600">
-                  Free requests: {userStatus.free_requests_remaining || 0}/100
-                </div>
-                {userStatus.has_valid_payment && (
-                  <div className="text-xs text-green-600 flex items-center">
-                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Premium Access Active
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <h2 className="text-lg font-semibold text-gray-900">Solidity AI Assistant</h2>
+          <p className="text-sm text-gray-500">Ask me anything about Solidity smart contracts</p>
         </div>
 
         {/* Messages Container */}
@@ -391,9 +323,7 @@ const ChatInterface = () => {
             {isLoading && (
               <div className="message assistant">
                 <div className="flex items-center space-x-2">
-                  <div className="loading-dots">
-                    {isRetrying ? 'Regenerating' : 'Thinking'}
-                  </div>
+                  <div className="loading-dots">Thinking</div>
                 </div>
               </div>
             )}
@@ -413,7 +343,7 @@ const ChatInterface = () => {
                 disabled={isLoading}
               />
               <button
-                onClick={() => sendMessage()}
+                onClick={sendMessage}
                 disabled={!inputValue.trim() || isLoading}
                 className="btn btn-primary px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -423,14 +353,6 @@ const ChatInterface = () => {
           </div>
         </div>
       </div>
-
-      {/* X402 Payment Modal */}
-      <X402PaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        paymentRequest={paymentRequest}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
     </div>
   )
 }

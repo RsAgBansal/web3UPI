@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useMetaMask } from '../../hooks/useMetaMask'
 
-const BlockchainActionCard = ({ actionData, onResult, onRetry }) => {
+const BlockchainActionCard = ({ actionData, onResult }) => {
   const { executeBlockchainAction, isConnected, account } = useMetaMask()
   const [isExecuting, setIsExecuting] = useState(false)
   const [result, setResult] = useState(null)
@@ -151,46 +151,29 @@ const BlockchainActionCard = ({ actionData, onResult, onRetry }) => {
         </div>
       )}
 
-      {/* Execute and Retry Buttons */}
-      <div className="flex space-x-2">
-        <button
-          onClick={handleExecute}
-          disabled={isExecuting || result?.success}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-            isExecuting
-              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              : result?.success
-              ? 'bg-green-200 text-green-800 cursor-not-allowed'
-              : isConnected
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          {isExecuting 
-            ? 'Executing...' 
-            : result?.success 
-            ? 'Executed ✓' 
-            : isConnected 
-            ? 'Execute with MetaMask' 
-            : 'Connect Wallet First'
-          }
-        </button>
-        
-        {onRetry && (
-          <button
-            onClick={onRetry}
-            disabled={isExecuting}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors border ${
-              isExecuting
-                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-            }`}
-            title="Generate a new response"
-          >
-            🔄 Retry
-          </button>
-        )}
-      </div>
+      {/* Execute Button */}
+      <button
+        onClick={handleExecute}
+        disabled={isExecuting || result?.success}
+        className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+          isExecuting
+            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            : result?.success
+            ? 'bg-green-200 text-green-800 cursor-not-allowed'
+            : isConnected
+            ? 'bg-blue-600 text-white hover:bg-blue-700'
+            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        {isExecuting 
+          ? 'Executing...' 
+          : result?.success 
+          ? 'Executed ✓' 
+          : isConnected 
+          ? 'Execute with MetaMask' 
+          : 'Connect Wallet First'
+        }
+      </button>
     </div>
   )
 }
