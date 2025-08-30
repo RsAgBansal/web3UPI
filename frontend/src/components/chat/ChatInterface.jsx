@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import MessageBubble from './MessageBubble'
 import CodeBlock from './CodeBlock'
+import BlockchainActionCard from '../blockchain/BlockchainActionCard'
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([
@@ -22,6 +23,123 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  const regenerateResponse = async (userInput) => {
+    setIsLoading(true)
+
+    try {
+      // Call the backend API again with the same input
+      const response = await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userInput
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      let assistantContent = ''
+      let assistantCode = ''
+      let parsedResponse = null
+      let isBlockchainAction = false
+      
+      if (data.success) {
+        // Display the LLM response
+        assistantContent = `Here's what I generated for you (regenerated):`
+        
+        // Parse the JSON response to check if it's a blockchain action
+        if (data.response) {
+          try {
+            let responseText = typeof data.response === 'string' ? data.response : JSON.stringify(data.response)
+            
+            // Remove common prefixes that might break JSON parsing
+            responseText = responseText
+              .replace(/^json\s*/i, '')     // Remove "json" prefix
+              .replace(/^```json\s*/i, '')  // Remove "```json" prefix
+              .replace(/```\s*$/, '')       // Remove trailing ```
+              .trim()
+            
+            console.log('Cleaned response text (retry):', responseText)
+            
+            parsedResponse = JSON.parse(responseText)
+            console.log('Parsed response (retry):', parsedResponse)
+            
+            // Check if this is a blockchain action
+            if (parsedResponse && parsedResponse.action) {
+              const blockchainActions = ['transfer_eth', 'deploy_contract', 'call_contract', 'get_balance', 'query_balance', 'create_contract']
+              isBlockchainAction = blockchainActions.includes(parsedResponse.action)
+              console.log('Is blockchain action (retry):', isBlockchainAction, 'Action:', parsedResponse.action)
+            }
+            
+            assistantCode = JSON.stringify(parsedResponse, null, 2)
+          } catch (error) {
+            console.error('Failed to parse response (retry):', error)
+            console.log('Raw response (retry):', data.response)
+            
+            // Try to extract JSON from text if parsing failed
+            try {
+              const jsonMatch = data.response.match(/\{[\s\S]*\}/)
+              if (jsonMatch) {
+                parsedResponse = JSON.parse(jsonMatch[0])
+                if (parsedResponse && parsedResponse.action) {
+                  const blockchainActions = ['transfer_eth', 'deploy_contract', 'call_contract', 'get_balance', 'query_balance', 'create_contract']
+                  isBlockchainAction = blockchainActions.includes(parsedResponse.action)
+                  console.log('Extracted blockchain action (retry):', isBlockchainAction, 'Action:', parsedResponse.action)
+                }
+                assistantCode = JSON.stringify(parsedResponse, null, 2)
+              } else {
+                assistantCode = data.response
+              }
+            } catch (secondError) {
+              console.error('Second parse attempt failed (retry):', secondError)
+              assistantCode = data.response
+            }
+          }
+        }
+
+        // Add context information if available
+        if (data.context_chunks) {
+          assistantContent += `\n\n📚 Context used from training data:\n${data.context_chunks}`
+        }
+      } else {
+        assistantContent = `Error: ${data.error}`
+      }
+
+      const assistantMessage = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: assistantContent,
+        code: assistantCode,
+        blockchainAction: isBlockchainAction ? parsedResponse : null,
+        rawJson: data.raw_llm_output,
+        timestamp: new Date()
+      }
+
+      console.log('Regenerated assistant message:', assistantMessage)
+      console.log('Regenerated blockchain action will be shown:', !!assistantMessage.blockchainAction)
+
+      setMessages(prev => [...prev, assistantMessage])
+    } catch (error) {
+      console.error('Regenerate API call failed:', error)
+      
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: `❌ Regeneration Error: ${error.message}\n\nMake sure the backend server is running on http://localhost:8000`,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    }
+
+    setIsLoading(false)
+  }
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
@@ -57,18 +175,60 @@ const ChatInterface = () => {
 
       let assistantContent = ''
       let assistantCode = ''
-
+      let parsedResponse = null
+      let isBlockchainAction = false
+      
       if (data.success) {
         // Display the LLM response
         assistantContent = `Here's what I generated for you:`
         
-        // If it's JSON, format it nicely
+        // Parse the JSON response to check if it's a blockchain action
         if (data.response) {
           try {
-            const jsonResponse = typeof data.response === 'string' ? JSON.parse(data.response) : data.response
-            assistantCode = JSON.stringify(jsonResponse, null, 2)
-          } catch {
-            assistantCode = data.response
+            let responseText = typeof data.response === 'string' ? data.response : JSON.stringify(data.response)
+            
+            // Remove common prefixes that might break JSON parsing
+            responseText = responseText
+              .replace(/^json\s*/i, '')     // Remove "json" prefix
+              .replace(/^```json\s*/i, '')  // Remove "```json" prefix
+              .replace(/```\s*$/, '')       // Remove trailing ```
+              .trim()
+            
+            console.log('Cleaned response text:', responseText)
+            
+            parsedResponse = JSON.parse(responseText)
+            console.log('Parsed response:', parsedResponse)
+            
+            // Check if this is a blockchain action
+            if (parsedResponse && parsedResponse.action) {
+              const blockchainActions = ['transfer_eth', 'deploy_contract', 'call_contract', 'get_balance', 'query_balance', 'create_contract']
+              isBlockchainAction = blockchainActions.includes(parsedResponse.action)
+              console.log('Is blockchain action:', isBlockchainAction, 'Action:', parsedResponse.action)
+            }
+            
+            assistantCode = JSON.stringify(parsedResponse, null, 2)
+          } catch (error) {
+            console.error('Failed to parse response:', error)
+            console.log('Raw response:', data.response)
+            
+            // Try to extract JSON from text if parsing failed
+            try {
+              const jsonMatch = data.response.match(/\{[\s\S]*\}/)
+              if (jsonMatch) {
+                parsedResponse = JSON.parse(jsonMatch[0])
+                if (parsedResponse && parsedResponse.action) {
+                  const blockchainActions = ['transfer_eth', 'deploy_contract', 'call_contract', 'get_balance', 'query_balance', 'create_contract']
+                  isBlockchainAction = blockchainActions.includes(parsedResponse.action)
+                  console.log('Extracted blockchain action:', isBlockchainAction, 'Action:', parsedResponse.action)
+                }
+                assistantCode = JSON.stringify(parsedResponse, null, 2)
+              } else {
+                assistantCode = data.response
+              }
+            } catch (secondError) {
+              console.error('Second parse attempt failed:', secondError)
+              assistantCode = data.response
+            }
           }
         }
 
@@ -85,9 +245,13 @@ const ChatInterface = () => {
         type: 'assistant',
         content: assistantContent,
         code: assistantCode,
+        blockchainAction: isBlockchainAction ? parsedResponse : null,
         rawJson: data.raw_llm_output, // Store raw JSON for debugging
         timestamp: new Date()
       }
+
+      console.log('Assistant message created:', assistantMessage)
+      console.log('Blockchain action will be shown:', !!assistantMessage.blockchainAction)
 
       setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
@@ -125,7 +289,36 @@ const ChatInterface = () => {
         <div className="chat-container">
           <div className="messages-container">
             {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <div key={message.id}>
+                <MessageBubble message={message} />
+                {/* Show BlockchainActionCard directly if it's a blockchain action */}
+                {message.blockchainAction && (
+                  <div className="px-4 pb-4">
+                    <BlockchainActionCard
+                      actionData={message.blockchainAction}
+                      onResult={(result) => {
+                        console.log('Blockchain execution result:', result)
+                        // Optionally update the message or show result
+                      }}
+                      onRetry={() => {
+                        console.log('Retry requested for message:', message.id)
+                        // Find the original user message that triggered this response
+                        const userMessage = messages.find(m => 
+                          m.type === 'user' && 
+                          Math.abs(m.id - message.id) < 5 && 
+                          m.id < message.id
+                        )
+                        if (userMessage) {
+                          // Remove the current assistant message and regenerate
+                          setMessages(prev => prev.filter(m => m.id !== message.id))
+                          // Trigger a new API call with the original user message
+                          regenerateResponse(userMessage.content)
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
             {isLoading && (
               <div className="message assistant">

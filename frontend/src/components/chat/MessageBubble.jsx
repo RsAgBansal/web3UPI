@@ -1,8 +1,20 @@
-import React from 'react'
+import React, { useState } from 'react'
 import CodeBlock from './CodeBlock'
+import BlockchainActionCard from '../blockchain/BlockchainActionCard'
 
 const MessageBubble = ({ message }) => {
   const isUser = message.type === 'user'
+  const [blockchainResult, setBlockchainResult] = useState(null)
+
+  const handleBlockchainResult = (result) => {
+    setBlockchainResult(result)
+  }
+
+  // Debug logging
+  console.log('MessageBubble received message:', message)
+  if (message.blockchainAction) {
+    console.log('MessageBubble has blockchain action:', message.blockchainAction)
+  }
 
   return (
     <div className={`message ${message.type}`}>
@@ -32,6 +44,26 @@ const MessageBubble = ({ message }) => {
                 language={message.code.startsWith('{') || message.code.startsWith('[') ? 'json' : 'solidity'}
                 showLineNumbers={true}
               />
+            )}
+
+            {/* Blockchain Action Card */}
+            {message.blockchainAction && (
+              <div className="mt-4">
+                <BlockchainActionCard 
+                  actionData={message.blockchainAction}
+                  onResult={handleBlockchainResult}
+                />
+              </div>
+            )}
+
+            {/* Show blockchain execution result */}
+            {blockchainResult && (
+              <div className="mt-3 p-3 rounded-lg bg-gray-50 border">
+                <h5 className="font-medium text-sm mb-2">Execution Result:</h5>
+                <div className={`text-sm ${blockchainResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                  {blockchainResult.message}
+                </div>
+              </div>
             )}
           </div>
         </div>
