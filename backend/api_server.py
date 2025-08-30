@@ -98,7 +98,7 @@ def test_llm():
 if __name__ == '__main__':
     print("🚀 Starting MindUnits Backend Server")
     print(f"📁 Model directory: {MODEL_DIR}")
-    print("🌐 Server will run on http://localhost:8000")
+    print("🌐 Server will run on http://localhost:8000/api/chat")
     print("🔗 Frontend should connect to http://localhost:8000/api/chat")
     
     app.run(debug=True, host='0.0.0.0', port=8000)

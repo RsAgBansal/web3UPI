@@ -26,7 +26,7 @@ genai.configure(api_key=GOOGLE_API_KEY)
 # --- Context Injection Setup ---
 # Get the directory of the current script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SAMPLES_FILE = os.path.join(SCRIPT_DIR, ".\data", "vector_samples.jsonl")
+SAMPLES_FILE = os.path.join(SCRIPT_DIR, ".\\data", "vector_samples.jsonl")
 NUM_CONTEXT_SAMPLES = 5  # Number of top matching samples to include as context
 
 def load_samples(filepath):

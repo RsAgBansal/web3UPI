@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Header from './components/common/Header'
 import Dashboard from './components/features/Dashboard'
 import ChatInterface from './components/chat/ChatInterface'
+import WalletDashboard from './components/wallet/WalletDashboard'
 import './styles/globals.css'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/chat" element={<ChatInterface />} />
+            <Route path="/wallet" element={<WalletDashboard />} />
           </Routes>
         </main>
       </div>
