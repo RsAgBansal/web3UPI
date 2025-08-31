@@ -4,8 +4,8 @@ import os
 import json
 import requests
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, constants
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
 
 # Load environment variables
 load_dotenv()
@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class NeoPayBot:
+class MindUnitsBot:
     def __init__(self):
         self.backend_url = BACKEND_URL
         # Dictionary to track user request counts {user_id: count}
@@ -47,7 +47,7 @@ class NeoPayBot:
         self.user_request_counts[user_id] = new_count
         return new_count
         
-    async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def start_command(self, update: Update, context: CallbackContext) -> None:
         """Handle /start command"""
         welcome_message = """
 🚀 Welcome to Neo Pay Web3 UPI!
@@ -57,10 +57,10 @@ I'm your Web3 UPI bridge assistant. Send crypto to any UPI ID instantly!
 ⚡ **Request Limit: 5 queries per session**
 
 💡 **What I can do:**
-• Connect your MetaMask wallet
-• Send crypto to UPI IDs instantly
-• Check wallet balances and transactions
-• Switch between blockchain networks
+• Create smart contracts (ERC20, NFT, DeFi, etc.)
+• Explain existing code
+• Help with blockchain transactions
+• Generate Solidity code from natural language
 
 📝 **Commands:**
 • /start - Start the bot
@@ -72,16 +72,16 @@ I'm your Web3 UPI bridge assistant. Send crypto to any UPI ID instantly!
 **Just type your request in natural language!**
 
 **Examples:**
-• "Connect my MetaMask wallet"
-• "Send 0.1 ETH to user@paytm"
-• "Check my wallet balance"
-• "Switch to Base network"
+• "Create an ERC20 token contract"
+• "Transfer 1 ETH to address 0x123..."
+• "Explain what this contract does"
+• "Deploy a voting contract"
 
-Let's bridge crypto and UPI payments together! 🔥
+Let's build some amazing Web3 projects together! 🔥
         """
         await update.message.reply_text(welcome_message)
 
-    async def remaining_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def remaining_command(self, update: Update, context: CallbackContext) -> None:
         """Show remaining requests for the user"""
         user_id = update.effective_user.id
         can_proceed, remaining = self.check_request_limit(user_id)
@@ -101,7 +101,7 @@ Let's bridge crypto and UPI payments together! 🔥
                 f"Please restart the bot with /start to get a new session."
             )
 
-    async def reset_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def reset_command(self, update: Update, context: CallbackContext) -> None:
         """Reset user's request count (admin feature)"""
         user_id = update.effective_user.id
         self.user_request_counts[user_id] = 0
@@ -110,10 +110,10 @@ Let's bridge crypto and UPI payments together! 🔥
             f"You now have {self.max_requests} fresh requests."
         )
 
-    async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def help_command(self, update: Update, context: CallbackContext) -> None:
         """Handle /help command"""
         help_message = """
-🆘 **Neo Pay Web3 UPI Help**
+🆘 **MindUnits AI Assistant Help**
 
 **Available Commands:**
 • /start - Show welcome message
@@ -134,7 +134,7 @@ Just send me any message about Solidity or blockchain!
         """
         await update.message.reply_text(help_message)
 
-    async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def status_command(self, update: Update, context: CallbackContext) -> None:
         """Check backend status"""
         try:
             response = requests.get(f"{self.backend_url}/api/health", timeout=5)
@@ -145,7 +145,7 @@ Just send me any message about Solidity or blockchain!
         except requests.exceptions.RequestException as e:
             await update.message.reply_text(f"❌ Backend is unreachable: {str(e)}")
 
-    async def examples_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def examples_command(self, update: Update, context: CallbackContext) -> None:
         """Show example queries"""
         examples_message = """
 💡 **Example Queries You Can Try:**
@@ -174,8 +174,8 @@ Just copy any of these or ask in your own words! 🎯
         """
         await update.message.reply_text(examples_message)
 
-    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle regular messages and send to LLM"""
+    async def handle_message(self, update: Update, context: CallbackContext) -> None:
+        """Handle regular messages and return hardcoded ETH balance"""
         user_message = update.message.text
         user_id = update.effective_user.id
         username = update.effective_user.username or "Unknown"
@@ -190,104 +190,50 @@ Just copy any of these or ask in your own words! 🎯
 ⚠️ **Request Limit Reached**
 
 You've used all {self.max_requests} requests for this session.
-
-🔄 **Options:**
-• Use /start to reset your session
-• Use /reset to clear your request count
-• Come back later for a fresh start
-
-Current usage: {self.user_request_counts.get(user_id, 0)}/{self.max_requests}
+Please restart the bot with /start to get a new session.
             """
             await update.message.reply_text(limit_message)
             return
-        
-        # Increment request count since we're processing
-        current_count = self.increment_request_count(user_id)
-        remaining_after = self.max_requests - current_count
-        
-        # Send typing indicator
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-        
-        try:
-            # Call your backend API
-            response = requests.post(
-                f"{self.backend_url}/api/chat",
-                json={"message": user_message},
-                timeout=30
-            )
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                if data.get("success"):
-                    # Format the response for Telegram
-                    reply_text = "🤖 **AI Response:**\n\n"
-                    
-                    # Add the main response
-                    llm_response = data.get("response", "")
-                    if llm_response:
-                        reply_text += f"```json\n{llm_response}\n```\n\n"
-                    
-                    # Add context if available
-                    context_chunks = data.get("context_chunks", "")
-                    if context_chunks:
-                        reply_text += f"📚 **Context Used:**\n{context_chunks[:500]}...\n\n"
-                    
-                    # Add request counter info
-                    reply_text += f"📊 **Requests:** {current_count}/{self.max_requests} used ({remaining_after} remaining)"
-                    
-                    # Split long messages
-                    if len(reply_text) > 4000:
-                        # Send in parts
-                        await update.message.reply_text(
-                            f"🤖 **AI Response:**\n\n```json\n{llm_response}\n```\n\n📊 **Requests:** {current_count}/{self.max_requests} used ({remaining_after} remaining)",
-                            parse_mode='Markdown'
-                        )
-                        if context_chunks:
-                            await update.message.reply_text(
-                                f"📚 **Context Used:**\n{context_chunks[:1000]}",
-                                parse_mode='Markdown'
-                            )
-                    else:
-                        await update.message.reply_text(reply_text, parse_mode='Markdown')
-                        
-                else:
-                    error_msg = data.get("error", "Unknown error occurred")
-                    await update.message.reply_text(f"❌ Error: {error_msg}\n\n📊 **Requests:** {current_count}/{self.max_requests} used ({remaining_after} remaining)")
-                    
-            else:
-                await update.message.reply_text(
-                    f"❌ Backend error: HTTP {response.status_code}\n"
-                    f"Make sure the backend server is running on {self.backend_url}"
-                )
-                
-        except requests.exceptions.Timeout:
-            await update.message.reply_text(
-                "⏱️ Request timed out. Your query might be too complex or the backend is busy. Please try again."
-            )
-        except requests.exceptions.RequestException as e:
-            await update.message.reply_text(
-                f"❌ Connection error: {str(e)}\n"
-                f"Make sure the backend server is running on {self.backend_url}"
-            )
-        except Exception as e:
-            logger.error(f"Error processing message: {str(e)}")
-            await update.message.reply_text(
-                f"❌ An unexpected error occurred: {str(e)}"
-            )
+        # Increment request count
+        self.increment_request_count(user_id)
+        
+        # Show typing action
+        await context.bot.send_chat_action(
+            chat_id=update.effective_chat.id,
+            action=constants.ChatAction.TYPING
+        )
+        
+        
+        balance = 0.0  
+        response_text = f"""
+ **Your ETH Balance**
 
-    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+• Balance: *{balance} ETH*
+• Value: *${balance * 3000:.2f}*
+
+
+        """
+        
+        # Send the response back to the user
+        await update.message.reply_markdown(
+            response_text,
+            disable_web_page_preview=True
+        )
+
+    async def error_handler(self, update: Update, context: CallbackContext) -> None:
         """Handle errors"""
         logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 def main() -> None:
     """Start the bot"""
-    print("🚀 Starting Neo Pay Telegram Bot...")
+    print("🚀 Starting MindUnits Telegram Bot...")
     print(f"🔗 Backend URL: {BACKEND_URL}")
     print(f"🤖 Bot Token: {TELEGRAM_BOT_TOKEN[:10]}...")
     
     # Create the bot instance
-    bot = NeoPayBot()
+    bot = MindUnitsBot()
     
     # Create the Application
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()

@@ -61,10 +61,12 @@ const ChatInterface = () => {
             
             // Remove common prefixes that might break JSON parsing
             responseText = responseText
-              .replace(/^json\s*/i, '')     // Remove "json" prefix
-              .replace(/^```json\s*/i, '')  // Remove "```json" prefix
-              .replace(/```\s*$/, '')       // Remove trailing ```
-              .trim()
+            responseText = responseText
+            .replace(/^json\s*/i, '')       // Remove leading "json"
+            .replace(/^```json\s*/i, '')    // Remove ```json
+            .replace(/^```/, '')            // Remove opening ```
+            .replace(/```$/, '')            // Remove trailing ```
+            .trim();
             
             console.log('Cleaned response text (retry):', responseText)
             
@@ -189,11 +191,12 @@ const ChatInterface = () => {
             
             // Remove common prefixes that might break JSON parsing
             responseText = responseText
-              .replace(/^json\s*/i, '')     // Remove "json" prefix
-              .replace(/^```json\s*/i, '')  // Remove "```json" prefix
-              .replace(/```\s*$/, '')       // Remove trailing ```
-              .trim()
-            
+            responseText = responseText
+            .replace(/^json\s*/i, '')       // Remove leading "json"
+  .replace(/^```json\s*/i, '')    // Remove ```json
+  .replace(/^```/, '')            // Remove opening ```
+  .replace(/```$/, '')            // Remove trailing ```
+  .trim();
             console.log('Cleaned response text:', responseText)
             
             parsedResponse = JSON.parse(responseText)
@@ -277,43 +280,52 @@ const ChatInterface = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg shadow-sm border">
-        {/* Chat Header */}
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Solidity AI Assistant</h2>
-          <p className="text-sm text-gray-500">Ask me anything about Solidity smart contracts</p>
-        </div>
-
-        {/* Messages Container */}
-        <div className="chat-container">
-          <div className="messages-container">
-            {messages.map((message) => (
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+          {/* Chat Header */}
+          <div className="p-6 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                  {/* Icon */}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Payment Assistant</h2>
+                  <p className="text-sm text-white/60">Blockchain operations & crypto payments</p>
+                </div>
+              </div>
+  
+              {/* User Status */}
+              {userStatus && (
+                <div className="text-right">
+                  <div className="text-xs text-white/60">
+                    Requests: {userStatus.requests_made || 0} / {userStatus.free_limit || 5}
+                  </div>
+                  {paymentInfo && (
+                    <div className="text-xs text-yellow-400">
+                      Payment Required: {paymentInfo.amount_eth} ETH
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+  
+          {/* Messages Container */}
+          <div className="h-96 overflow-y-auto p-6 space-y-4">
+            {messages.map(message => (
               <div key={message.id}>
                 <MessageBubble message={message} />
-                {/* Show BlockchainActionCard directly if it's a blockchain action */}
                 {message.blockchainAction && (
-                  <div className="px-4 pb-4">
+                  <div className="mt-4">
                     <BlockchainActionCard
                       actionData={message.blockchainAction}
-                      onResult={(result) => {
-                        console.log('Blockchain execution result:', result)
-                        // Optionally update the message or show result
+                      onResult={result => {
+                        /* handle result */
                       }}
                       onRetry={() => {
-                        console.log('Retry requested for message:', message.id)
-                        // Find the original user message that triggered this response
-                        const userMessage = messages.find(m => 
-                          m.type === 'user' && 
-                          Math.abs(m.id - message.id) < 5 && 
-                          m.id < message.id
-                        )
-                        if (userMessage) {
-                          // Remove the current assistant message and regenerate
-                          setMessages(prev => prev.filter(m => m.id !== message.id))
-                          // Trigger a new API call with the original user message
-                          regenerateResponse(userMessage.content)
-                        }
+                        /* handle retry */
                       }}
                     />
                   </div>
@@ -321,31 +333,65 @@ const ChatInterface = () => {
               </div>
             ))}
             {isLoading && (
-              <div className="message assistant">
-                <div className="flex items-center space-x-2">
-                  <div className="loading-dots">Thinking</div>
+              <div className="flex items-center justify-start">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 max-w-xs">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }} />
+                      <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                    </div>
+                    <span className="text-white/60 text-sm">Thinking...</span>
+                  </div>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
-
+  
           {/* Input Area */}
-          <div className="p-4 border-t bg-gray-50">
-            <div className="flex space-x-2">
+          <div className="p-6 border-t border-white/10 bg-black/20">
+            {showPaymentModal && (
+              <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl">
+                <div className="mb-2">
+                  <label className="block text-sm text-yellow-400 mb-1">
+                    Transaction Hash (after payment):
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentTxHash}
+                    onChange={e => setPaymentTxHash(e.target.value)}
+                    placeholder="Paste your transaction hash here..."
+                    className="w-full p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:ring-2 focus:ring-yellow-500/50 focus:border-transparent"
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <small className="text-yellow-400/80">
+                    Enter the transaction hash from your payment
+                  </small>
+                  <button
+                    onClick={() => setShowPaymentModal(false)}
+                    className="text-xs text-white/60 hover:text-white px-2 py-1 rounded"
+                  >
+                    Hide
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="flex space-x-3">
               <textarea
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={e => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me to create a contract, explain code, or help debug..."
-                className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows="3"
+                rows="2"
                 disabled={isLoading}
+                className="flex-1 p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl resize-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent text-white placeholder-white/50 min-h-[60px]"
               />
               <button
                 onClick={sendMessage}
                 disabled={!inputValue.trim() || isLoading}
-                className="btn btn-primary px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Send
               </button>
@@ -353,8 +399,6 @@ const ChatInterface = () => {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-export default ChatInterface
+      </div>
+    )
+  }

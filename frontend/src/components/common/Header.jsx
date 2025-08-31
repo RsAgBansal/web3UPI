@@ -43,7 +43,7 @@ const Header = () => {
 
           {/* User menu */}
           <div className="flex items-center space-x-4">
-            <MetaMaskConnect className="text-white" />
+            <MetaMaskConnect className="text-black" />
             <Link
               to="/new-contract"
               className="relative inline-flex items-center px-5 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-full shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 transition"
