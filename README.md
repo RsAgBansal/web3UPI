@@ -98,9 +98,7 @@ python app.py      # Backend (port 8000)
 ```bash
 # Backend Environment (.env)
 FLASK_ENV=development
-OPENAI_API_KEY=your_openai_key
-VECTOR_DB_URL=your_vector_database_url
-FACILITATOR_URL=https://x402.org/api
+GEMINI_API_KEY=your_gemini_key
 PAYMENT_WALLET_ADDRESS=your_payment_address
 
 # Frontend Environment (.env.local)
