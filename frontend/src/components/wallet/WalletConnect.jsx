@@ -130,7 +130,7 @@ const WalletConnect = () => {
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">MetaMask Required</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Wallet Required</h3>
           <p className="text-gray-600 mb-4">
             Please install MetaMask extension to connect your wallet and use Web3 UPI features.
           </p>
@@ -151,9 +151,9 @@ const WalletConnect = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-black rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Wallet Connection</h2>
+        <h2 className="text-xl font-semibold text-white">Wallet Connection</h2>
         {isConnected && (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
@@ -175,7 +175,7 @@ const WalletConnect = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Connect Your Wallet</h3>
+          <h3 className="text-lg font-semibold text- mb-2">Connect Your Wallet</h3>
           <p className="text-gray-600 mb-4">
             Connect your MetaMask wallet to start using Web3 UPI features.
           </p>
@@ -197,7 +197,7 @@ const WalletConnect = () => {
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1V8z" clipRule="evenodd" />
                 </svg>
-                Connect MetaMask
+                Connect Wallet
               </>
             )}
           </button>

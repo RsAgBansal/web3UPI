@@ -144,60 +144,58 @@ const UPITransfer = () => {
 
   if (!isConnected) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Wallet Required</h3>
-          <p className="text-gray-600">
-            Please connect your MetaMask wallet to make UPI transfers.
-          </p>
+      <div className="text-center py-8">
+        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 rounded-2xl flex items-center justify-center">
+          <svg className="w-10 h-10 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
         </div>
+        <h3 className="text-xl font-bold text-white mb-3">Wallet Required</h3>
+        <p className="text-white/70">
+          Please connect your MetaMask wallet to make Bank Transfer
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center mb-6">
-        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="space-y-6">
+      <div className="flex items-center space-x-3">
+        <div className="w-12 h-12 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl flex items-center justify-center">
+          <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
           </svg>
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Web3 UPI Transfer</h2>
-          <p className="text-sm text-gray-600">Send crypto via UPI ID</p>
+          <h2 className="text-2xl font-bold text-white">Web3 Bank Transfer</h2>
+          <p className="text-white/70">Send crypto via Bank Transfer</p>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl backdrop-blur-sm">
+          <p className="text-red-300 text-sm">{error}</p>
         </div>
       )}
 
       {txHash && (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-600 mb-2">✅ Transaction submitted successfully!</p>
+        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl backdrop-blur-sm">
+          <p className="text-green-300 text-sm mb-2">✅ Transaction submitted successfully!</p>
           <a
             href={getExplorerUrl(txHash)}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:text-blue-700 break-all"
+            className="text-sm text-blue-400 hover:text-blue-300 break-all font-mono"
           >
             {txHash}
           </a>
         </div>
       )}
 
-      <form onSubmit={handleTransfer} className="space-y-4">
+      <form onSubmit={handleTransfer} className="space-y-6">
         <div>
-          <label htmlFor="upiId" className="block text-sm font-medium text-gray-700 mb-1">
-            UPI ID *
+          <label htmlFor="upiId" className="block text-sm font-medium text-white mb-2">
+            BANK ADDRESS *
           </label>
           <input
             type="text"
@@ -206,14 +204,14 @@ const UPITransfer = () => {
             value={transferData.upiId}
             onChange={handleInputChange}
             placeholder="user@paytm"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-green-500/50 focus:border-transparent text-white placeholder-white/50 transition"
             required
           />
-          <p className="text-xs text-gray-500 mt-1">Enter the recipient's UPI ID</p>
+          <p className="text-xs text-white/60 mt-2">Enter the recipient's Bank Address</p>
         </div>
 
         <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="amount" className="block text-sm font-medium text-white mb-2">
             Amount (ETH) *
           </label>
           <input
@@ -225,13 +223,13 @@ const UPITransfer = () => {
             placeholder="0.01"
             step="0.001"
             min="0"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-green-500/50 focus:border-transparent text-white placeholder-white/50 transition"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="message" className="block text-sm font-medium text-white mb-2">
             Message (Optional)
           </label>
           <input
@@ -241,29 +239,16 @@ const UPITransfer = () => {
             value={transferData.message}
             onChange={handleInputChange}
             placeholder="Payment for..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-green-500/50 focus:border-transparent text-white placeholder-white/50 transition"
           />
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-start">
-            <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <p className="text-sm font-medium text-blue-800">How it works</p>
-              <p className="text-xs text-blue-600 mt-1">
-                Your crypto will be converted and sent to the UPI ID via our bridge system. 
-                The recipient will receive INR in their UPI account.
-              </p>
-            </div>
-          </div>
-        </div>
+        
 
         <button
           type="submit"
           disabled={isLoading || !isConnected}
-          className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-2xl hover:from-green-500 hover:to-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] shadow-xl"
         >
           {isLoading ? (
             <>
@@ -284,8 +269,8 @@ const UPITransfer = () => {
         </button>
       </form>
 
-      <div className="mt-4 text-xs text-gray-500 text-center">
-        Connected: {metamaskService.formatAddress(account)}
+      <div className="text-xs text-white/50 text-center">
+        Connected: {metamaskService.formatAddress && metamaskService.formatAddress(account)}
       </div>
     </div>
   );

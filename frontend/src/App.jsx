@@ -5,6 +5,7 @@ import Dashboard from './components/features/Dashboard'
 import ChatInterface from './components/chat/ChatInterface'
 import WalletDashboard from './components/wallet/WalletDashboard'
 import TestBlockchain from './components/test/TestBlockchain'
+import MetaMaskTest from './components/test/MetaMaskTest'
 import './styles/globals.css'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
             <Route path="/chat" element={<ChatInterface />} />
             <Route path="/wallet" element={<WalletDashboard />} />
             <Route path="/test" element={<TestBlockchain />} />
+            <Route path="/test/metamask" element={<MetaMaskTest />} />
           </Routes>
         </main>
       </div>

@@ -4,16 +4,57 @@ import subprocess
 import json
 import sys
 import os
+from multiprocessing import Value
+from functools import wraps
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend requests
+CORS(app)
+
+# ✅ Add request counter with thread-safe increment
+request_counter = Value('i', 0)  # Integer counter starting at 0
+FREE_LIMIT = 1
 
 # Get the path to the model directory
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model')
 
-@app.route('/api/chat', methods=['POST'])
+def increment_request_count():
+    """Thread-safe counter increment"""
+    with request_counter.get_lock():
+        request_counter.value += 1
+        return request_counter.value
+
+def get_request_count():
+    """Get current request count safely"""
+    with request_counter.get_lock():
+        return request_counter.value
+
+def track_requests(f):
+    """Decorator to automatically track API requests"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Increment counter before processing request
+        current_count = increment_request_count()
+        print(f"🔢 Request #{current_count} to {request.endpoint}")
+        
+        # Execute the original function
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/api/chat', methods=['GET', 'POST'])
+@track_requests  # ✅ This will increment counter automatically
 def chat():
     """Handle chat requests from frontend and send to llm.py"""
+    current_requests = get_request_count()
+    
+    # Check if user exceeded free limit
+    if current_requests > FREE_LIMIT:
+        return jsonify({
+            "error": "Free limit exceeded. Payment required.",
+            "requests_made": current_requests,
+            "free_limit": FREE_LIMIT,
+            "payment_required": True
+        }), 402  # Payment Required
+    
     try:
         # Get the message from frontend
         data = request.get_json()
@@ -21,6 +62,7 @@ def chat():
         
         if not message:
             return jsonify({"error": "No message provided"}), 400
+            
         # Prepare input for llm.py
         llm_input = {
             "prompt": message
@@ -36,16 +78,16 @@ def chat():
         )
         
         if result.returncode == 0:
-            # Parse the JSON response from llm.py
             try:
                 llm_response = json.loads(result.stdout)
                 
-                # Return the response to frontend
                 return jsonify({
                     "success": True,
                     "response": llm_response.get("response", ""),
                     "context_chunks": llm_response.get("context_chunks", ""),
-                    "raw_llm_output": llm_response
+                    "raw_llm_output": llm_response,
+                    "requests_made": current_requests,  # ✅ Include current count
+                    "free_limit": FREE_LIMIT
                 })
             except json.JSONDecodeError:
                 return jsonify({
@@ -62,136 +104,67 @@ def chat():
     except Exception as e:
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
+@app.route('/api/user/status', methods=['GET'])
+def user_status():
+    """Get user payment status and request limits"""
+    try:
+        current_requests = get_request_count()
+        payment_required = current_requests >= FREE_LIMIT
+        
+        return jsonify({
+            "requests_made": current_requests,  # ✅ Real dynamic count
+            "free_limit": FREE_LIMIT,
+            "user_id": "user123",
+            "payment_required": payment_required,
+            "remaining_requests": max(0, FREE_LIMIT - current_requests)
+        })
+    except Exception as e:
+        return jsonify({"error": f"Status error: {str(e)}"}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
-    return jsonify({"status": "healthy", "message": "Backend is running"})
+    current_requests = get_request_count()
+    return jsonify({
+        "status": "healthy", 
+        "message": "Backend is running",
+        "total_requests": current_requests
+    })
 
-@app.route('/api/test-llm', methods=['POST'])
-def test_llm():
-    """Test endpoint to check if llm.py is working"""
+@app.route('/api/reset-counter', methods=['POST'])
+def reset_counter():
+    """Reset request counter (for testing)"""
+    with request_counter.get_lock():
+        request_counter.value = 0
+    return jsonify({"message": "Counter reset", "requests_made": 0})
+
+@app.route('/api/verify-payment', methods=['POST'])
+def verify_payment():
+    """Verify payment and reset user's request count"""
     try:
-        # Test with a simple prompt
-        test_input = {"prompt": "create an ERC20 token"}
+        data = request.get_json()
+        tx_hash = data.get('tx_hash')
         
-        result = subprocess.run(
-            [sys.executable, 'llm.py'],
-            input=json.dumps(test_input),
-            text=True,
-            capture_output=True,
-            cwd=MODEL_DIR
-        )
-        
+        if not tx_hash:
+            return jsonify({"error": "Transaction hash required"}), 400
+            
+        # TODO: Add real payment verification logic here
+        # For now, just reset the counter
+        with request_counter.get_lock():
+            request_counter.value = 0
+            
         return jsonify({
-            "llm_available": result.returncode == 0,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "return_code": result.returncode
+            "success": True, 
+            "message": "Payment verified and counter reset",
+            "tx_hash": tx_hash
         })
-        
     except Exception as e:
-        return jsonify({
-            "llm_available": False,
-            "error": str(e)
-        })
+        return jsonify({"error": f"Payment verification error: {str(e)}"}), 500
 
 if __name__ == '__main__':
     print("🚀 Starting Neo Pay Backend Server")
     print(f"📁 Model directory: {MODEL_DIR}")
-    print("🌐 Server will run on http://localhost:8000/api/chat")
-    print("🔗 Frontend should connect to http://localhost:8000/api/chat")
+    print("🌐 Server will run on http://localhost:8000")
+    print(f"🔢 Request counter initialized at: {get_request_count()}")
     
     app.run(debug=True, host='0.0.0.0', port=8000)
-
-# import requests
-# from flask import Flask, request, jsonify
-# from flask_cors import CORS
-# import subprocess, json, sys, os
-
-# app = Flask(__name__)
-# CORS(app)
-
-# MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model')
-
-# # --- Simple free usage tracking ---
-# user_usage = {}  # key: user_id, value: number of free requests used
-# FREE_LIMIT = 3
-
-# # Coinbase Commerce API setup
-# COINBASE_API_KEY = os.getenv("COINBASE_API_KEY")
-# COINBASE_API_URL = "https://api.commerce.coinbase.com/charges"
-# COINBASE_HEADERS = {
-#     "Content-Type": "application/json",
-#     "X-CC-Api-Key": COINBASE_API_KEY,
-#     "X-CC-Version": "2018-03-22"
-# }
-
-# @app.route('/api/chat', methods=['POST'])
-# def chat():
-#     data = request.get_json()
-#     message = data.get('message', '')
-#     user_id = data.get('user_id', 'guest')  # you’ll want JWT or session auth later
-
-#     if not message:
-#         return jsonify({"error": "No message provided"}), 400
-
-#     # Check free usage
-#     used = user_usage.get(user_id, 0)
-#     if used >= FREE_LIMIT:
-#         # Require payment via Coinbase
-#         charge_data = {
-#             "name": "LLM Access",
-#             "description": "Unlock unlimited chat with our AI model",
-#             "local_price": {"amount": "1.00", "currency": "USD"},
-#             "pricing_type": "fixed_price",
-#             "metadata": {"user_id": user_id}
-#         }
-#         response = requests.post(COINBASE_API_URL, headers=COINBASE_HEADERS, json=charge_data)
-#         if response.status_code == 201:
-#             charge = response.json()["data"]
-#             return jsonify({
-#                 "success": False,
-#                 "payment_required": True,
-#                 "payment_url": charge["hosted_url"]
-#             })
-#         else:
-#             return jsonify({
-#                 "error": "Payment system unavailable",
-#                 "details": response.text
-#             }), 500
-
-#     # Otherwise, count usage and run LLM
-#     user_usage[user_id] = used + 1
-
-#     llm_input = {"prompt": message}
-#     result = subprocess.run(
-#         [sys.executable, 'llm.py'],
-#         input=json.dumps(llm_input),
-#         text=True,
-#         capture_output=True,
-#         cwd=MODEL_DIR
-#     )
-#     if result.returncode == 0:
-#         try:
-#             llm_response = json.loads(result.stdout)
-#             return jsonify({
-#                 "success": True,
-#                 "response": llm_response.get("response", "")
-#             })
-#         except json.JSONDecodeError:
-#             return jsonify({"error": "Invalid JSON from LLM"}), 500
-#     else:
-#         return jsonify({"error": "LLM execution failed"}), 500
-
-
-# # Coinbase webhook endpoint
-# @app.route('/api/webhook/coinbase', methods=['POST'])
-# def coinbase_webhook():
-#     event = request.get_json()
-#     # TODO: verify signature with Coinbase webhook secret
-#     if event and event.get("event", {}).get("type") == "charge:confirmed":
-#         user_id = event["event"]["data"]["metadata"]["user_id"]
-#         # Reset or extend their quota
-#         user_usage[user_id] = 0
-#     return jsonify({"status": "ok"})
-

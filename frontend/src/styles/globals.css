@@ -58,7 +58,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
-  background: white;
+  background: gray;
   border-radius: 0.5rem;
   margin-bottom: 1rem;
 }
